@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        canvas {
+            padding: 0;
+            margin: auto;
+            display: block;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        html,
+        body {
+            overscroll-behavior-y: contain;
+        }
+        body {
+            background-color: #000518
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="board" style="border:3px solid #FFF;">
+    </canvas>
+
+</body>
+<script>
+    
+    var canvas = document.getElementById("board");
+    var scale = 500;
+    var padding = 5;
+    var speed = 10;
+
+    var n = 5;
+
+    canvas.width = n * Math.floor(scale / n) + (n + 1) * padding;
+    canvas.height = n * Math.floor(scale / n) + (n + 1) * padding;
+
+    var pieceWidth = Math.floor(scale / n);
+
+    var ctx = canvas.getContext("2d");
+    ctx.font = Math.floor(pieceWidth / 2) + "px Arial";
+
+    const pieces = [];
+    for (let i = 1; i < n * n; i++) {
+        pieces.push(i);
+    }
+    pieces.push(0);
+
+    var prevBlankPosition = pieces.length - 1;
+    var blankPosition = pieces.length - 1;
+
+    function move(key) {
+        let y = Math.floor(blankPosition / n);
+        let x = blankPosition % n;
+        
+        if (key == 40) {
+            if (y > 0) {
+                pieces[blankPosition] = pieces[(y - 1) * n + x];
+                prevBlankPosition = blankPosition;
+                blankPosition = (y - 1) * n + x;
+                pieces[blankPosition] = 0;
+            }
+        }
+        else if (key == 38) {
+            if (y < n - 1) {
+                pieces[blankPosition] = pieces[(y + 1) * n + x];
+                prevBlankPosition = blankPosition;
+                blankPosition = (y + 1) * n + x;
+                pieces[blankPosition] = 0;
+            }
+        }
+        else if (key == 39) {
+            if (x > 0) {
+                pieces[blankPosition] = pieces[y * n + (x - 1)];
+                prevBlankPosition = blankPosition;
+                blankPosition = y * n + (x - 1);
+                pieces[blankPosition] = 0;
+            }
+        }
+        else if (key == 37) {
+            if (x < n - 1) {
+                pieces[blankPosition] = pieces[y * n + (x + 1)];
+                prevBlankPosition = blankPosition;
+                blankPosition = y * n + (x + 1);
+                pieces[blankPosition] = 0;
+            }
+        }
+    }
+
+    function shuffle() {
+        for (let i = 0; i < 10000; i++) {
+            let randomMove = Math.floor(Math.random() * 4) + 37;
+            move(randomMove);
+        }
+        for (let i = 0; i < n; i++) {
+            move(37);
+            move(38);
+        }
+    }
+
+    function render() {
+
+        ctx.fillStyle = "#000518";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < n * n; i++) {
+
+            let y = Math.floor(i / n);
+            let x = i % n;
+            
+            if (pieces[i] != 0) {
+
+                ctx.fillStyle = (pieces[i] == i + 1) ? "#5F5" : "#FFF";
+
+                ctx.fillRect(x * (padding + pieceWidth) + padding,
+                             y * (padding + pieceWidth) + padding,
+                             pieceWidth, pieceWidth);
+
+                ctx.fillStyle = "#000518";
+
+                let metrics = ctx.measureText(pieces[i]);
+                let fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
+                let fontWidth = metrics.width
+
+                ctx.fillText(pieces[i],
+                             x * (padding + pieceWidth) + padding + (pieceWidth - fontWidth) * 0.5,
+                             y * (padding + pieceWidth) + padding + (pieceWidth + fontHeight) * 0.5);
+            }
+            
+        }
+    }
+
+    shuffle();
+    render();
+
+    document.addEventListener('keydown', function(event) {
+        move(event.keyCode);
+        render();
+    });
+
+    document.addEventListener('touchstart', handleTouchStart, false);
+    document.addEventListener('touchmove', handleTouchMove, false);
+
+    var xDown = null;
+    var yDown = null;
+
+    function getTouches(evt) {
+        return evt.touches || evt.originalEvent.touches;
+    }
+    
+    function handleTouchStart(evt) {
+        const firstTouch = getTouches(evt)[0];
+        xDown = firstTouch.clientX;
+        yDown = firstTouch.clientY;
+    }
+    
+    function handleTouchMove(evt) {
+        if (!xDown || !yDown) {
+            return;
+        }
+
+        var xUp = evt.touches[0].clientX;
+        var yUp = evt.touches[0].clientY;
+
+        var xDiff = xDown - xUp;
+        var yDiff = yDown - yUp;
+        
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            if (xDiff > 0) {
+                move(37);
+            }
+            else {
+                move(39);
+            }
+        } else {
+            if (yDiff > 0) {
+                move(38);
+            }
+            else { 
+                move(40);
+            } 
+        }
+
+        render();
+        
+        xDown = null;
+        yDown = null;
+    }
+
+
+
+/*
+    var elem = document.getElementById('board'),
+    elemLeft = elem.offsetLeft + elem.clientLeft,
+    elemTop = elem.offsetTop + elem.clientTop,
+    context = elem.getContext('2d'),
+    elements = [];
+
+    // Add event listener for `click` events.
+    elem.addEventListener('click', function(event) {
+        var x = event.pageX - elemLeft,
+            y = event.pageY - elemTop;
+
+        // Collision detection between clicked offset and element.
+        elements.forEach(function(element) {
+            if (y > element.top && y < element.top + element.height 
+                && x > element.left && x < element.left + element.width) {
+                alert('clicked an element');
+            }
+        });
+
+    }, false);
+    */
+
+    // Add element.
+    elements.push({
+        colour: '#05EFFF',
+        width: 150,
+        height: 100,
+        top: 20,
+        left: 15
+    });
+
+    // Render elements.
+    elements.forEach(function(element) {
+        context.fillStyle = element.colour;
+        context.fillRect(element.left, element.top, element.width, element.height);
+    });
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+</script>
+</html>
