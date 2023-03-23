@@ -122,8 +122,7 @@
 
     function initialize() {
 
-        canvas.width = n * Math.floor(scale / n) + (n + 1) * padding;
-        canvas.height = n * Math.floor(scale / n) + (n + 1) * padding;
+        canvas = createCanvas(n * Math.floor(scale / n) + (n + 1) * padding);
 
         pieceWidth = Math.floor(scale / n);
 
@@ -149,6 +148,21 @@
         render();
     }
 
+    function createCanvas(size, set2dTransform = true) {
+
+        const ratio = Math.ceil(window.devicePixelRatio);
+        
+        canvas.width = size * ratio;
+        canvas.height = size * ratio;
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+        if (set2dTransform) {
+            canvas.getContext('2d').setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+        return canvas;
+    }
+
+
     function increaseSize() {
         if (n < maxSize) {
             n++;
@@ -170,10 +184,10 @@
         }
     }
 
-    var canvasLeft = canvas.offsetLeft + canvas.clientLeft;
-    var canvasTop = canvas.offsetTop + canvas.clientTop;
-
     canvas.addEventListener('click', function(event) {
+
+        var canvasLeft = canvas.offsetLeft + canvas.clientLeft;
+        var canvasTop = canvas.offsetTop + canvas.clientTop;
 
         var xPos = event.pageX - canvasLeft;
         var yPos = event.pageY - canvasTop;
