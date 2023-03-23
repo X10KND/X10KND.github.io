@@ -98,7 +98,7 @@
     var minSize = 2;
     var maxSize = 10;
 
-    var animationSteps = 20;
+    var animationSteps = 50;
 
     var canvas = document.getElementById("board");
     var ctx = canvas.getContext("2d");
@@ -205,26 +205,30 @@
                     var diff = clickY - blankY;
                     if (diff < 0) {
                         for (var i = 1; i <= Math.abs(diff); i++) {
-                            move(40, true);
+                            move(40, false);
                         }
+                        render();
                     }
                     else if (diff > 0) {
                         for (var i = 1; i <= diff; i++) {
-                            move(38, true);
+                            move(38, false);
                         }
+                        render();
                     }
                 }
                 else if (clickY == blankY) {
                     var diff = clickX - blankX;
                     if (diff < 0) {
                         for (var i = 1; i <= Math.abs(diff); i++) {
-                            move(39, true);
+                            move(39, false);
                         }
+                        render();
                     }
                     else if (diff > 0) {
                         for (var i = 1; i <= diff; i++) {
-                            move(37, true);
+                            move(37, false);
                         }
+                        render();
                     }
                 }
 
