@@ -8,7 +8,7 @@ else {
 var padding = 5;
 
 var n = 3; //Board size n x n
-var minSize = 2;
+var minSize = 3;
 var maxSize = 10;
 
 var animationSteps = 50;
@@ -17,6 +17,10 @@ var canvas = document.getElementById("board");
 var ctx = canvas.getContext("2d");
 
 var boardText = document.getElementById("board-text");
+
+var moveCount = 0;
+var startTime = 0;
+var totalTime = "";
 
 var pieceWidth = 0;
 
@@ -41,7 +45,7 @@ function initialize() {
 
     ctx.font = Math.floor(pieceWidth / 2) + "px Arial";
 
-    boardText.innerText = "Board Size " + n + "x" + n;
+    boardText.innerText = `Board Size ${n}x${n}`;
 
     pieces = [];
     for (var i = 1; i < n * n; i++) {
@@ -93,6 +97,12 @@ function newGame() {
     if (confirm("Are you sure you want to start a new game?")) {
         shuffle();
         render();
+    }
+}
+
+function declareWin() {
+    if (confirm(`You completed a ${n}x${n} board\nTime: ${totalTime}\nMoves: ${moveCount}\nWould a like to try a larger board?`)) {
+        increaseSize();
     }
 }
 
@@ -195,6 +205,12 @@ function move(key, slide) {
 
     if (movedFlag) {
 
+        moveCount++;
+
+        if (moveCount == 1) {
+            startTime = new Date().getTime();
+        }
+
         var new_y = Math.floor(prevBlankPosition / n);
         var new_x = prevBlankPosition % n;
 
@@ -240,7 +256,7 @@ function move(key, slide) {
 
                     blocks[prevBlankBlock].top += block_top_steps;
                     blocks[prevBlankBlock].left += block_left_steps;
-                    render();
+                    render(true);
                 }, i);
             }
 
@@ -286,6 +302,16 @@ function shuffle() {
         move(37, false);
         move(38, false);
     }
+    moveCount = 0;
+
+    var timeNow = new Date().getTime();
+    var timeTaken = new Date() - startTime;
+    var minutes = Math.floor(timeTaken / 60);
+    var seconds = timeTaken % 60;
+    
+    totalTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+    canvas.style.border = `3px solid ${unmatchedPieceColour}`
 }
 
 function addBlocks() {
@@ -333,7 +359,7 @@ function addNumbers() {
     }
 }
 
-function render() {
+function render(slide=false) {
 
     ctx.fillStyle = backgroundColour;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -350,6 +376,21 @@ function render() {
         ctx.fillStyle = number.colour;
         ctx.fillText(number.text, number.left, number.top);
     });
+
+    if(!slide) {
+        winFlag = true;
+        for (var i = 0; i < pieces.length - 1; i++) {
+            if(pieces[i] != i + 1) {
+                winFlag = false;
+                break;
+            }
+        }
+
+        if (winFlag) {
+            canvas.style.border = `3px solid ${matchedPieceColour}`
+            setTimeout(declareWin, 500);
+        }
+    }
 
 }
 

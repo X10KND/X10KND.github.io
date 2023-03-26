@@ -3,64 +3,7 @@
 <head>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <style>
-        canvas {
-            margin: 20px;
-        }
-        html,
-        body {
-            overscroll-behavior-y: contain;
-            overflow: hidden;
-            height: 100%;
-        }
-        body {
-            background-color: #000518;
-            margin: 0;
-        }
-        .row-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 5px;
-        }
-        .column-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        h1 {
-            color: #FFF;
-            font-family: Arial;
-        }
-        h2 {
-            color: #FFF;
-            font-family: Arial;
-        }
-        .main-button {
-            background-color: white;
-            border: none;
-            color: #000518;
-            font-family: Arial;
-            padding: 10px;
-            display: inline-block;
-            border-radius: 10px;
-            font-size: 20px;
-        }
-        .main-button:active {
-            background-color: #aaa;
-        }
-        i {
-            color: #fff;
-            margin: 15px;
-        }
-        i:active {
-            color: #aaa;
-        }
-
-    </style>
+    <link rel="stylesheet" href="puzzle.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
