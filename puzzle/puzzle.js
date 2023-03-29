@@ -1,39 +1,41 @@
+let scale = 400;
+
 if (screen.width > screen.height) {
-    var scale = screen.width / 5;
+    scale = screen.width / 5;
 }
 else {
-    var scale = screen.width / 1.5;
+    scale = screen.width / 1.5;
 }
 
-var padding = 5;
+let padding = 5;
 
-var n = 3; //Board size n x n
-var minSize = 3;
-var maxSize = 10;
+let n = 3; //Board size n x n
+let minSize = 3;
+let maxSize = 10;
 
-var animationSteps = 50;
+let animationSteps = 50;
 
-var canvas = document.getElementById("board");
-var ctx = canvas.getContext("2d");
+let canvas = document.getElementById("board");
+let ctx = canvas.getContext("2d");
 
-var boardText = document.getElementById("board-text");
+let boardText = document.getElementById("board-text");
 
-var moveCount = 0;
-var startTime = 0;
-var totalTime = "";
+let moveCount = 0;
+let startTime = 0;
+let totalTime = "";
 
-var pieceWidth = 0;
+let pieceWidth = 0;
 
-var pieces = [];
-var blocks = [];
-var numbers = [];
+let pieces = [];
+let blocks = [];
+let numbers = [];
 
-var prevBlankPosition = 0;
-var blankPosition = 0;
+let prevBlankPosition = 0;
+let blankPosition = 0;
 
-var backgroundColour = "#000518";
-var matchedPieceColour = "#7F7";
-var unmatchedPieceColour = "#FFF"
+let backgroundColour = "#000518";
+let matchedPieceColour = "#7F7";
+let unmatchedPieceColour = "#FFF"
 
 initialize();
 
@@ -48,7 +50,7 @@ function initialize() {
     boardText.innerText = `Board Size ${n}x${n}`;
 
     pieces = [];
-    for (var i = 1; i < n * n; i++) {
+    for (let i = 1; i < n * n; i++) {
         pieces.push(i);
     }
     pieces.push(0);
@@ -101,6 +103,15 @@ function newGame() {
 }
 
 function declareWin() {
+
+    let timeTaken = new Date().getTime() - startTime;
+    timeTaken = Math.floor(timeTaken / 1000);
+
+    let minutes = Math.floor(timeTaken / 60);
+    let seconds = timeTaken % 60;
+    
+    totalTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
     if (confirm(`You completed a ${n}x${n} board\nTime: ${totalTime}\nMoves: ${moveCount}\nWould a like to try a larger board?`)) {
         increaseSize();
     }
@@ -108,46 +119,46 @@ function declareWin() {
 
 canvas.addEventListener('click', function(event) {
 
-    var canvasLeft = canvas.offsetLeft + canvas.clientLeft;
-    var canvasTop = canvas.offsetTop + canvas.clientTop;
+    let canvasLeft = canvas.offsetLeft + canvas.clientLeft;
+    let canvasTop = canvas.offsetTop + canvas.clientTop;
 
-    var xPos = event.pageX - canvasLeft;
-    var yPos = event.pageY - canvasTop;
+    let xPos = event.pageX - canvasLeft;
+    let yPos = event.pageY - canvasTop;
 
     blocks.forEach(function(block) {
         if (yPos > block.top && yPos < block.top + block.height && xPos > block.left && xPos < block.left + block.width) {
 
-            var clickY = Math.round((block.top - padding) / (padding + pieceWidth));
-            var clickX = Math.round((block.left - padding) / (padding + pieceWidth));
+            let clickY = Math.round((block.top - padding) / (padding + pieceWidth));
+            let clickX = Math.round((block.left - padding) / (padding + pieceWidth));
 
-            var blankY = Math.floor(blankPosition / n);
-            var blankX = blankPosition % n;
+            let blankY = Math.floor(blankPosition / n);
+            let blankX = blankPosition % n;
 
             if (clickX == blankX) {
-                var diff = clickY - blankY;
+                let diff = clickY - blankY;
                 if (diff < 0) {
-                    for (var i = 1; i <= Math.abs(diff); i++) {
+                    for (let i = 1; i <= Math.abs(diff); i++) {
                         move(40, false);
                     }
                     render();
                 }
                 else if (diff > 0) {
-                    for (var i = 1; i <= diff; i++) {
+                    for (let i = 1; i <= diff; i++) {
                         move(38, false);
                     }
                     render();
                 }
             }
             else if (clickY == blankY) {
-                var diff = clickX - blankX;
+                let diff = clickX - blankX;
                 if (diff < 0) {
-                    for (var i = 1; i <= Math.abs(diff); i++) {
+                    for (let i = 1; i <= Math.abs(diff); i++) {
                         move(39, false);
                     }
                     render();
                 }
                 else if (diff > 0) {
-                    for (var i = 1; i <= diff; i++) {
+                    for (let i = 1; i <= diff; i++) {
                         move(37, false);
                     }
                     render();
@@ -161,8 +172,8 @@ canvas.addEventListener('click', function(event) {
 
 function move(key, slide) {
 
-    var y = Math.floor(blankPosition / n);
-    var x = blankPosition % n;
+    let y = Math.floor(blankPosition / n);
+    let x = blankPosition % n;
 
     movedFlag = false;
     
@@ -211,45 +222,45 @@ function move(key, slide) {
             startTime = new Date().getTime();
         }
 
-        var new_y = Math.floor(prevBlankPosition / n);
-        var new_x = prevBlankPosition % n;
+        let new_y = Math.floor(prevBlankPosition / n);
+        let new_x = prevBlankPosition % n;
 
-        var old_y = Math.floor(blankPosition / n);
-        var old_x = blankPosition % n;
+        let old_y = Math.floor(blankPosition / n);
+        let old_x = blankPosition % n;
 
-        var blankBlock = (pieces[blankPosition] + (n * n) - 1) % (n * n);
-        var prevBlankBlock = (pieces[prevBlankPosition] + (n * n) - 1) % (n * n);
+        let blankBlock = (pieces[blankPosition] + (n * n) - 1) % (n * n);
+        let prevBlankBlock = (pieces[prevBlankPosition] + (n * n) - 1) % (n * n);
 
         if (slide) {
 
             blocks[blankBlock].top = old_y * (padding + pieceWidth) + padding;
             blocks[blankBlock].left = old_x * (padding + pieceWidth) + padding;
 
-            var metrics = ctx.measureText(numbers[prevBlankBlock].text);
-            var fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
-            var fontWidth = metrics.width;
+            let metrics = ctx.measureText(numbers[prevBlankBlock].text);
+            let fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
+            let fontWidth = metrics.width;
 
-            var current_number_top = numbers[prevBlankBlock].top;
-            var current_number_left = numbers[prevBlankBlock].left;
+            let current_number_top = numbers[prevBlankBlock].top;
+            let current_number_left = numbers[prevBlankBlock].left;
 
-            var current_block_top = blocks[prevBlankBlock].top;
-            var current_block_left = blocks[prevBlankBlock].left;
+            let current_block_top = blocks[prevBlankBlock].top;
+            let current_block_left = blocks[prevBlankBlock].left;
 
-            var number_target_top = new_y * (padding + pieceWidth) + padding + (pieceWidth + fontHeight) * 0.5;
-            var number_target_left = new_x * (padding + pieceWidth) + padding + (pieceWidth - fontWidth) * 0.5;
+            let number_target_top = new_y * (padding + pieceWidth) + padding + (pieceWidth + fontHeight) * 0.5;
+            let number_target_left = new_x * (padding + pieceWidth) + padding + (pieceWidth - fontWidth) * 0.5;
 
-            var block_target_top = new_y * (padding + pieceWidth) + padding;
-            var block_target_left = new_x * (padding + pieceWidth) + padding;
+            let block_target_top = new_y * (padding + pieceWidth) + padding;
+            let block_target_left = new_x * (padding + pieceWidth) + padding;
 
-            var number_top_steps = (number_target_top - current_number_top) / animationSteps;
-            var number_left_steps = (number_target_left - current_number_left) / animationSteps;
+            let number_top_steps = (number_target_top - current_number_top) / animationSteps;
+            let number_left_steps = (number_target_left - current_number_left) / animationSteps;
 
-            var block_top_steps = (block_target_top - current_block_top) / animationSteps;
-            var block_left_steps = (block_target_left - current_block_left) / animationSteps;
+            let block_top_steps = (block_target_top - current_block_top) / animationSteps;
+            let block_left_steps = (block_target_left - current_block_left) / animationSteps;
 
             blocks[prevBlankBlock].colour = unmatchedPieceColour;
 
-            for (var i = 1; i <= animationSteps; i++) {
+            for (let i = 1; i <= animationSteps; i++) {
                 setTimeout(function() {
                     numbers[prevBlankBlock].top += number_top_steps;
                     numbers[prevBlankBlock].left += number_left_steps;
@@ -269,9 +280,9 @@ function move(key, slide) {
         }
         else {
 
-            var metrics = ctx.measureText(numbers[prevBlankBlock].text);
-            var fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
-            var fontWidth = metrics.width;
+            let metrics = ctx.measureText(numbers[prevBlankBlock].text);
+            let fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
+            let fontWidth = metrics.width;
 
             numbers[prevBlankBlock].top = new_y * (padding + pieceWidth) + padding + (pieceWidth + fontHeight) * 0.5;
             numbers[prevBlankBlock].left = new_x * (padding + pieceWidth) + padding + (pieceWidth - fontWidth) * 0.5;
@@ -294,34 +305,26 @@ function move(key, slide) {
 }
 
 function shuffle() {
-    for (var i = 0; i < 10000; i++) {
-        var randomMove = Math.floor(Math.random() * 4) + 37;
+    for (let i = 0; i < 10000; i++) {
+        let randomMove = Math.floor(Math.random() * 4) + 37;
         move(randomMove, false);
     }
-    for (var i = 0; i < n; i++) {
+    for (let i = 0; i < n; i++) {
         move(37, false);
         move(38, false);
     }
     moveCount = 0;
-
-    var timeNow = new Date().getTime();
-    var timeTaken = new Date() - startTime;
-    var minutes = Math.floor(timeTaken / 60);
-    var seconds = timeTaken % 60;
-    
-    totalTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-
     canvas.style.border = `3px solid ${unmatchedPieceColour}`
 }
 
 function addBlocks() {
 
-    for (var i = 0; i < n * n; i++) {
+    for (let i = 0; i < n * n; i++) {
 
-        var y = Math.floor(i / n);
-        var x = i % n;
+        let y = Math.floor(i / n);
+        let x = i % n;
 
-        var colour = (pieces[i] == i + 1) ? matchedPieceColour : unmatchedPieceColour;
+        let colour = (pieces[i] == i + 1) ? matchedPieceColour : unmatchedPieceColour;
 
         if (pieces[i] == 0) {
             colour = backgroundColour;
@@ -340,14 +343,14 @@ function addBlocks() {
 
 function addNumbers() {
 
-    for (var i = 0; i < n * n; i++) {
+    for (let i = 0; i < n * n; i++) {
 
-        var y = Math.floor(i / n);
-        var x = i % n;
+        let y = Math.floor(i / n);
+        let x = i % n;
 
-        var metrics = ctx.measureText(pieces[i]);
-        var fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
-        var fontWidth = metrics.width;
+        let metrics = ctx.measureText(pieces[i]);
+        let fontHeight = metrics.actualBoundingBoxAscent  + metrics.actualBoundingBoxDescent;
+        let fontWidth = metrics.width;
 
         numbers.push({
             colour: backgroundColour,
@@ -379,7 +382,7 @@ function render(slide=false) {
 
     if(!slide) {
         winFlag = true;
-        for (var i = 0; i < pieces.length - 1; i++) {
+        for (let i = 0; i < pieces.length - 1; i++) {
             if(pieces[i] != i + 1) {
                 winFlag = false;
                 break;
@@ -401,8 +404,8 @@ document.addEventListener('keydown', function(event) {
 document.addEventListener('touchstart', handleTouchStart, false);
 document.addEventListener('touchmove', handleTouchMove, false);
 
-var xDown = null;
-var yDown = null;
+let xDown = null;
+let yDown = null;
 
 function getTouches(evt) {
     return evt.touches || evt.originalEvent.touches;
@@ -419,11 +422,11 @@ function handleTouchMove(evt) {
         return;
     }
 
-    var xUp = evt.touches[0].clientX;
-    var yUp = evt.touches[0].clientY;
+    let xUp = evt.touches[0].clientX;
+    let yUp = evt.touches[0].clientY;
 
-    var xDiff = xDown - xUp;
-    var yDiff = yDown - yUp;
+    let xDiff = xDown - xUp;
+    let yDiff = yDown - yUp;
 
     if (Math.abs(xDiff) > Math.abs(yDiff)) {
         if (xDiff > 0) {
