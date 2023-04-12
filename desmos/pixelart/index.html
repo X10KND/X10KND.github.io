@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pixel Art</title>
+    <script src="https://www.desmos.com/api/v1.7/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+</head>
+<body>
+    <input type='file' />
+    <img id="myImg" src="#", style="width:32px">
+    <canvas id="myCanvas" width="32px" height="32px"></canvas>
+    <div id="calculator" style="width: 600px; height: 600px;"></div>
+</body>
+
+<script type="text/javascript">
+
+    let elt = document.getElementById("calculator");
+    let calculator = Desmos.GraphingCalculator(elt, { autosize: false, expressions:false });
+    let counter = 0;
+
+    window.addEventListener('load', function() {
+        document.querySelector('input[type="file"]').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                let img = document.getElementById('myImg');
+
+                img.onload = () => {
+                    URL.revokeObjectURL(img.src);
+                    let canvas = document.getElementById('myCanvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+                    let ctx = canvas.getContext('2d');
+
+                    let c = 0;
+
+                    for( ; counter > 0; counter--) {
+                        calculator.removeExpression({ id: counter });
+                    }
+
+                    for(let y = 0; y < img.height; y++) {
+                        for(let x = 0; x < img.width; x++) {
+
+                            c = ctx.getImageData(x, y, 1, 1).data;
+                            
+                            calculator.setExpression({
+                                id: counter+1,
+                                fillOpacity: 1,
+                                latex: `\\operatorname{polygon}\\left(\\left[${x},${x},${x+1},${x+1}\\right],\\left[${img.height-y},${img.height-(y+1)},${img.height-(y+1)},${img.height-y}\\right]\\right)`,
+                                color: `rgb(${c[0]},${c[1]},${c[2]})`
+                            });
+
+                            counter++;
+                            
+                        }
+                        
+                    }
+                    calculator.setMathBounds({
+                      left: -1,
+                      right: img.width + 1,
+                      bottom: -1,
+                      top: img.height + 1
+                    });
+                }
+                img.src = URL.createObjectURL(this.files[0]);      
+            }
+        });
+    });
+</script>
+</html>
