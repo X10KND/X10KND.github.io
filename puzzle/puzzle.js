@@ -35,7 +35,7 @@ let blankPosition = 0;
 
 let backgroundColour = "#000518";
 let matchedPieceColour = "#7F7";
-let unmatchedPieceColour = "#FFF"
+let unmatchedPieceColour = "#FFF";
 
 initialize();
 
@@ -314,7 +314,7 @@ function shuffle() {
         move(38, false);
     }
     moveCount = 0;
-    canvas.style.border = `3px solid ${unmatchedPieceColour}`
+    canvas.style.border = `3px solid ${unmatchedPieceColour}`;
 }
 
 function addBlocks() {
@@ -390,7 +390,7 @@ function render(slide=false) {
         }
 
         if (winFlag) {
-            canvas.style.border = `3px solid ${matchedPieceColour}`
+            canvas.style.border = `3px solid ${matchedPieceColour}`;
             setTimeout(declareWin, 500);
         }
     }
