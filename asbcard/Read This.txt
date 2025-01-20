@@ -1,0 +1,14 @@
+Random Card Number Generator
+
+
+This web application is designed to streamline the process of distributing exam cards randomly.
+
+How to Use:
+*** Open the index.html File: Simply double-click the index.html file to launch the application in your web browser.
+*** Give Minimum and Maximum card numbers.
+*** Generate Card Numbers: Click the "Generate" button to obtain a set of random card numbers.
+*** You can reset the button after each session
+
+P.S.
+The browser based app consist of all the three files.
+Do not delete any of the three files. Keep these in the same folder.
