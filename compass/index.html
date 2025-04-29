@@ -31,17 +31,21 @@
     const enableButton = document.getElementById('enableButton');
 
     function handleOrientation(event) {
-      if (event.absolute === true || event.absolute === undefined) {
-        if (event.alpha !== null) {
-          const heading = Math.round(event.alpha);
-          headingElement.textContent = `${heading}°`;
-        } else {
-          headingElement.textContent = "No data";
-        }
+      let heading;
+    
+      // For Android Chrome & iOS Safari
+      if (event.webkitCompassHeading) {
+        heading = event.webkitCompassHeading;
+      } else if (event.absolute === true && event.alpha !== null) {
+        heading = 360 - event.alpha; // compensate rotation direction
       } else {
-        headingElement.textContent = "Not absolute data";
+        headingElement.textContent = "Compass not supported.";
+        return;
       }
+    
+      headingElement.textContent = `${Math.round(heading)}°`;
     }
+
 
     function initCompass() {
       window.addEventListener('deviceorientation', handleOrientation, true);
