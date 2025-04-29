@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compass & Orientation</title>
+    <title>Device Orientation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,21 +42,24 @@
             color: #666;
             font-style: italic;
         }
+        #request-log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
-    <h1>Compass & Orientation Data</h1>
+    <h1>Device Orientation Data</h1>
     
     <div class="sensor-block" id="permissions">
         <h2>Sensor Access</h2>
         <p class="status" id="permission-status">Permission not granted</p>
-        <button id="request-permission">Request Sensors Access</button>
-    </div>
-
-    <div class="sensor-block">
-        <h2>Compass</h2>
-        <p>Heading: <span class="value" id="compass-heading">--</span>°</p>
-        <p>Direction: <span id="compass-direction">--</span></p>
+        <button id="request-permission">Request Orientation Access</button>
     </div>
 
     <div class="sensor-block">
@@ -67,50 +70,75 @@
     </div>
 
     <div class="sensor-block">
-        <h2>Absolute Orientation</h2>
-        <p class="status" id="absolute-status">Not available</p>
-        <p>Absolute North: <span class="value" id="absolute-north">--</span>°</p>
+        <h2>Request Log</h2>
+        <div id="request-log">No requests sent yet.</div>
     </div>
 
     <script>
         const permissionBtn = document.getElementById('request-permission');
         const permissionStatus = document.getElementById('permission-status');
-        const compassHeading = document.getElementById('compass-heading');
-        const compassDirection = document.getElementById('compass-direction');
         const alphaValue = document.getElementById('alpha');
         const betaValue = document.getElementById('beta');
         const gammaValue = document.getElementById('gamma');
-        const absoluteStatus = document.getElementById('absolute-status');
-        const absoluteNorth = document.getElementById('absolute-north');
+        const requestLog = document.getElementById('request-log');
 
-        let hasPermission = false;
         let deviceOrientationGranted = false;
-
-        function getCardinalDirection(angle) {
-            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-            return directions[Math.round(angle / 45) % 8];
-        }
+        let lastSentValues = {alpha: null, beta: null, gamma: null};
+        let sendingRequest = false;
+        let requestDebounceTimer = null;
 
         function handleOrientation(event) {
-            const alpha = event.alpha ? Math.round(event.alpha) : '--';
-            const beta = event.beta ? Math.round(event.beta) : '--'; 
-            const gamma = event.gamma ? Math.round(event.gamma) : '--';
+            const alpha = event.alpha ? event.alpha.toFixed(2) : '--';
+            const beta = event.beta ? event.beta.toFixed(2) : '--'; 
+            const gamma = event.gamma ? event.gamma.toFixed(2) : '--';
             
             alphaValue.textContent = alpha;
             betaValue.textContent = beta;
             gammaValue.textContent = gamma;
             
-            if (event.absolute) {
-                absoluteStatus.textContent = "Available";
-                const heading = 360 - alpha;
-                absoluteNorth.textContent = Math.round(heading);
-                compassHeading.textContent = Math.round(heading);
-                compassDirection.textContent = getCardinalDirection(heading);
+            if (alpha !== '--' && beta !== '--' && gamma !== '--') {
+                sendOrientationData(alpha, beta, gamma);
             }
         }
 
-        function handleMotion(event) {
-            // Acceleration data could be added here if needed
+        function sendOrientationData(alpha, beta, gamma) {
+            // Prevent sending identical values
+            if (
+                lastSentValues.alpha === alpha && 
+                lastSentValues.beta === beta && 
+                lastSentValues.gamma === gamma
+            ) {
+                return;
+            }
+            
+            // Debounce requests to avoid flooding
+            if (requestDebounceTimer) {
+                clearTimeout(requestDebounceTimer);
+            }
+            
+            requestDebounceTimer = setTimeout(() => {
+                if (sendingRequest) return;
+                
+                sendingRequest = true;
+                
+                const url = `https://example.com?x=${beta}&y=${gamma}&z=${alpha}`;
+                
+                fetch(url)
+                    .then(response => {
+                        const timestamp = new Date().toLocaleTimeString();
+                        requestLog.innerHTML = `${timestamp} - GET ${url}<br>` + requestLog.innerHTML;
+                        
+                        // Update last sent values
+                        lastSentValues = {alpha, beta, gamma};
+                    })
+                    .catch(error => {
+                        const timestamp = new Date().toLocaleTimeString();
+                        requestLog.innerHTML = `${timestamp} - ERROR: ${error.message}<br>` + requestLog.innerHTML;
+                    })
+                    .finally(() => {
+                        sendingRequest = false;
+                    });
+            }, 200); // Send at most once every 200ms
         }
 
         async function requestOrientationPermission() {
@@ -121,7 +149,8 @@
                         permissionStatus.textContent = "Orientation permission granted";
                         window.addEventListener('deviceorientation', handleOrientation);
                         deviceOrientationGranted = true;
-                        checkAllPermissions();
+                        permissionBtn.disabled = true;
+                        permissionBtn.textContent = "Orientation Access Granted";
                     } else {
                         permissionStatus.textContent = "Orientation permission denied";
                     }
@@ -131,39 +160,14 @@
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
                 deviceOrientationGranted = true;
-                checkAllPermissions();
-            }
-        }
-
-        async function requestMotionPermission() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                try {
-                    const permissionState = await DeviceMotionEvent.requestPermission();
-                    if (permissionState === 'granted') {
-                        window.addEventListener('devicemotion', handleMotion);
-                        checkAllPermissions();
-                    }
-                } catch (error) {
-                    permissionStatus.textContent += " | Motion error: " + error;
-                }
-            } else {
-                window.addEventListener('devicemotion', handleMotion);
-                checkAllPermissions();
-            }
-        }
-
-        function checkAllPermissions() {
-            if (deviceOrientationGranted) {
-                hasPermission = true;
+                permissionStatus.textContent = "Orientation available without permission (non-iOS)";
                 permissionBtn.disabled = true;
-                permissionBtn.textContent = "Sensors Access Granted";
-                permissionStatus.textContent = "All required permissions granted";
+                permissionBtn.textContent = "Orientation Access Granted";
             }
         }
 
         permissionBtn.addEventListener('click', async () => {
             await requestOrientationPermission();
-            await requestMotionPermission();
         });
 
         // For devices that don't require permission
@@ -173,7 +177,8 @@
                     window.addEventListener('deviceorientation', handleOrientation);
                     deviceOrientationGranted = true;
                     permissionStatus.textContent = "Orientation available without permission (non-iOS)";
-                    checkAllPermissions();
+                    permissionBtn.disabled = true;
+                    permissionBtn.textContent = "Orientation Access Granted";
                 }
             } else {
                 permissionStatus.textContent = "Device orientation not supported";
