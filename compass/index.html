@@ -120,24 +120,18 @@
                 if (sendingRequest) return;
                 
                 sendingRequest = true;
-                
-                const url = `https://example.com?x=${beta}&y=${gamma}&z=${alpha}`;
-                
-                fetch(url)
-                    .then(response => {
-                        const timestamp = new Date().toLocaleTimeString();
-                        requestLog.innerHTML = `${timestamp} - GET ${url}<br>` + requestLog.innerHTML;
-                        
-                        // Update last sent values
-                        lastSentValues = {alpha, beta, gamma};
-                    })
-                    .catch(error => {
-                        const timestamp = new Date().toLocaleTimeString();
-                        requestLog.innerHTML = `${timestamp} - ERROR: ${error.message}<br>` + requestLog.innerHTML;
-                    })
-                    .finally(() => {
-                        sendingRequest = false;
-                    });
+                 
+                fetch('http://192.168.109.127:8090/api/collections/lidar/records', {
+        		  method: 'POST',
+        		  headers: {
+        			'Content-Type': 'application/json',
+        		  },
+        		  body: JSON.stringify({
+        			x: beta,
+        			y: gamma,
+        			z: alpha
+        		  })
+        		})
             }, 200); // Send at most once every 200ms
         }
 
