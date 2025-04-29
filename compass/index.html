@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Compass Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 50px;
+    }
+    #heading {
+      font-size: 48px;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Compass Heading</h1>
+  <div id="heading">Waiting...</div>
+  <button id="enableButton" style="display:none;">Enable Compass</button>
+
+  <script>
+    const headingElement = document.getElementById('heading');
+    const enableButton = document.getElementById('enableButton');
+
+    function handleOrientation(event) {
+      if (event.absolute === true || event.absolute === undefined) {
+        if (event.alpha !== null) {
+          const heading = Math.round(event.alpha);
+          headingElement.textContent = `${heading}°`;
+        } else {
+          headingElement.textContent = "No data";
+        }
+      } else {
+        headingElement.textContent = "Not absolute data";
+      }
+    }
+
+    function initCompass() {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    function requestPermissionAndStart() {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              initCompass();
+              enableButton.style.display = 'none';
+            } else {
+              headingElement.textContent = 'Permission denied';
+            }
+          })
+          .catch(error => {
+            console.error(error);
+            headingElement.textContent = 'Error requesting permission';
+          });
+      } else {
+        // No permission request needed
+        initCompass();
+      }
+    }
+
+    window.addEventListener('load', () => {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ or new Chrome versions
+        enableButton.style.display = 'inline-block';
+        enableButton.addEventListener('click', requestPermissionAndStart);
+      } else {
+        // Older browsers
+        initCompass();
+      }
+    });
+  </script>
+
+</body>
+</html>
