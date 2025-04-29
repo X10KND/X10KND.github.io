@@ -1,88 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Compass Example</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 50px;
-    }
-    #heading {
-      font-size: 48px;
-      margin-top: 20px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      margin-top: 30px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compass & Orientation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .sensor-block {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .status {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-
-  <h1>Compass Heading</h1>
-  <div id="heading">Waiting...</div>
-  <button id="enableButton" style="display:none;">Enable Compass</button>
-
-  <script>
-    const headingElement = document.getElementById('heading');
-    const enableButton = document.getElementById('enableButton');
-
-    function handleOrientation(event) {
-      let heading;
+    <h1>Compass & Orientation Data</h1>
     
-      // For Android Chrome & iOS Safari
-      if (event.webkitCompassHeading) {
-        heading = event.webkitCompassHeading;
-      } else if (event.absolute === true && event.alpha !== null) {
-        heading = 360 - event.alpha; // compensate rotation direction
-      } else {
-        headingElement.textContent = "Compass not supported.";
-        return;
-      }
-    
-      headingElement.textContent = `${Math.round(heading)}°`;
-    }
+    <div class="sensor-block" id="permissions">
+        <h2>Sensor Access</h2>
+        <p class="status" id="permission-status">Permission not granted</p>
+        <button id="request-permission">Request Sensors Access</button>
+    </div>
 
+    <div class="sensor-block">
+        <h2>Compass</h2>
+        <p>Heading: <span class="value" id="compass-heading">--</span>°</p>
+        <p>Direction: <span id="compass-direction">--</span></p>
+    </div>
 
-    function initCompass() {
-      window.addEventListener('deviceorientation', handleOrientation, true);
-    }
+    <div class="sensor-block">
+        <h2>Device Orientation</h2>
+        <p>Alpha (z-axis): <span class="value" id="alpha">--</span>°</p>
+        <p>Beta (x-axis): <span class="value" id="beta">--</span>°</p>
+        <p>Gamma (y-axis): <span class="value" id="gamma">--</span>°</p>
+    </div>
 
-    function requestPermissionAndStart() {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === 'granted') {
-              initCompass();
-              enableButton.style.display = 'none';
-            } else {
-              headingElement.textContent = 'Permission denied';
+    <div class="sensor-block">
+        <h2>Absolute Orientation</h2>
+        <p class="status" id="absolute-status">Not available</p>
+        <p>Absolute North: <span class="value" id="absolute-north">--</span>°</p>
+    </div>
+
+    <script>
+        const permissionBtn = document.getElementById('request-permission');
+        const permissionStatus = document.getElementById('permission-status');
+        const compassHeading = document.getElementById('compass-heading');
+        const compassDirection = document.getElementById('compass-direction');
+        const alphaValue = document.getElementById('alpha');
+        const betaValue = document.getElementById('beta');
+        const gammaValue = document.getElementById('gamma');
+        const absoluteStatus = document.getElementById('absolute-status');
+        const absoluteNorth = document.getElementById('absolute-north');
+
+        let hasPermission = false;
+        let deviceOrientationGranted = false;
+
+        function getCardinalDirection(angle) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return directions[Math.round(angle / 45) % 8];
+        }
+
+        function handleOrientation(event) {
+            const alpha = event.alpha ? Math.round(event.alpha) : '--';
+            const beta = event.beta ? Math.round(event.beta) : '--'; 
+            const gamma = event.gamma ? Math.round(event.gamma) : '--';
+            
+            alphaValue.textContent = alpha;
+            betaValue.textContent = beta;
+            gammaValue.textContent = gamma;
+            
+            if (event.absolute) {
+                absoluteStatus.textContent = "Available";
+                const heading = 360 - alpha;
+                absoluteNorth.textContent = Math.round(heading);
+                compassHeading.textContent = Math.round(heading);
+                compassDirection.textContent = getCardinalDirection(heading);
             }
-          })
-          .catch(error => {
-            console.error(error);
-            headingElement.textContent = 'Error requesting permission';
-          });
-      } else {
-        // No permission request needed
-        initCompass();
-      }
-    }
+        }
 
-    window.addEventListener('load', () => {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // iOS 13+ or new Chrome versions
-        enableButton.style.display = 'inline-block';
-        enableButton.addEventListener('click', requestPermissionAndStart);
-      } else {
-        // Older browsers
-        initCompass();
-      }
-    });
-  </script>
+        function handleMotion(event) {
+            // Acceleration data could be added here if needed
+        }
 
+        async function requestOrientationPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        permissionStatus.textContent = "Orientation permission granted";
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        deviceOrientationGranted = true;
+                        checkAllPermissions();
+                    } else {
+                        permissionStatus.textContent = "Orientation permission denied";
+                    }
+                } catch (error) {
+                    permissionStatus.textContent = "Error requesting orientation permission: " + error;
+                }
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+                deviceOrientationGranted = true;
+                checkAllPermissions();
+            }
+        }
+
+        async function requestMotionPermission() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceMotionEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        window.addEventListener('devicemotion', handleMotion);
+                        checkAllPermissions();
+                    }
+                } catch (error) {
+                    permissionStatus.textContent += " | Motion error: " + error;
+                }
+            } else {
+                window.addEventListener('devicemotion', handleMotion);
+                checkAllPermissions();
+            }
+        }
+
+        function checkAllPermissions() {
+            if (deviceOrientationGranted) {
+                hasPermission = true;
+                permissionBtn.disabled = true;
+                permissionBtn.textContent = "Sensors Access Granted";
+                permissionStatus.textContent = "All required permissions granted";
+            }
+        }
+
+        permissionBtn.addEventListener('click', async () => {
+            await requestOrientationPermission();
+            await requestMotionPermission();
+        });
+
+        // For devices that don't require permission
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.DeviceOrientationEvent) {
+                if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    deviceOrientationGranted = true;
+                    permissionStatus.textContent = "Orientation available without permission (non-iOS)";
+                    checkAllPermissions();
+                }
+            } else {
+                permissionStatus.textContent = "Device orientation not supported";
+                permissionBtn.disabled = true;
+            }
+        });
+    </script>
 </body>
 </html>
