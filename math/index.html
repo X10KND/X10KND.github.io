@@ -280,11 +280,11 @@
             </div>
             <div class="score-item">
                 <div class="score-label">Questions</div>
-                <div class="score-value"><span id="current-question">0</span>/<span id="total-questions">10</span></div>
+                <div class="score-value"><span id="current-question">0</span></div>
             </div>
             <div class="score-item">
-                <div class="score-label">Level</div>
-                <div class="score-value" id="level">1</div>
+                <div class="score-label">Lives</div>
+                <div class="score-value" id="lives">3</div>
             </div>
         </div>
         
@@ -304,16 +304,14 @@
         
         <div class="controls">
             <button class="btn" id="start-btn">Start Game</button>
-            <button class="btn" id="next-btn" style="display: none;">Next Question</button>
         </div>
     </div>
     
     <script>
         // Game Settings
         const settings = {
-            questions: 10,
-            timePerQuestion: 10, // seconds
-            currentMode: 'addition',
+            timePerQuestion: 20, // seconds
+            currentMode: 'mixed',
             level: 1,
             options: 4
         };
@@ -322,10 +320,12 @@
         const state = {
             score: 0,
             currentQuestion: 0,
+            lives: 3,
             timer: null,
             answer: null,
             options: [],
-            gameActive: false
+            gameActive: false,
+            nextQuestionTimer: null
         };
         
         // DOM Elements
@@ -338,21 +338,11 @@
         const startBtn = document.getElementById('start-btn');
         const nextBtn = document.getElementById('next-btn');
         const progressEl = document.getElementById('progress');
-        const levelEl = document.getElementById('level');
+        const livesEl = document.getElementById('lives');
         const levelIndicator = document.querySelector('.level-indicator');
         const timerBarEl = document.getElementById('timer-bar');
-        const modeBtns = document.querySelectorAll('.mode-btn');
         
-        // Set up mode buttons
-        modeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (state.gameActive) return; // Don't change mode during active game
-                
-                modeBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                settings.currentMode = btn.dataset.mode;
-            });
-        });
+        // Always mixed mode
         
         // Generate problem based on current mode and level
         function generateProblem() {
@@ -503,26 +493,36 @@
                 option.style.pointerEvents = 'none';
             });
             
+            let waitTime;
             if (selectedAnswer === state.answer) {
                 state.score += settings.level * 10;
                 scoreEl.textContent = state.score;
                 messageEl.textContent = 'Correct! Great job! 🎉';
                 messageEl.style.color = '#4caf50';
                 createConfetti(20);
+                waitTime = 2000; // 2 seconds for correct answer
             } else {
+                state.lives--;
+                livesEl.textContent = state.lives;
                 messageEl.textContent = `Oops! The correct answer is ${state.answer}.`;
                 messageEl.style.color = '#f44336';
+                waitTime = 5000; // 5 seconds for wrong answer
+                
+                if (state.lives <= 0) {
+                    endGame();
+                    return;
+                }
             }
             
             state.currentQuestion++;
             currentQuestionEl.textContent = state.currentQuestion;
             updateProgress();
             
-            if (state.currentQuestion >= settings.questions) {
-                endGame();
-            } else {
-                nextBtn.style.display = 'block';
-            }
+            // Auto proceed to next question after delay
+            clearTimeout(state.nextQuestionTimer);
+            state.nextQuestionTimer = setTimeout(() => {
+                nextQuestion();
+            }, waitTime);
         }
         
         // Start the timer for current question
@@ -544,15 +544,23 @@
                         option.style.pointerEvents = 'none';
                     });
                     
+                    state.lives--;
+                    livesEl.textContent = state.lives;
+                    
+                    if (state.lives <= 0) {
+                        endGame();
+                        return;
+                    }
+                    
                     state.currentQuestion++;
                     currentQuestionEl.textContent = state.currentQuestion;
                     updateProgress();
                     
-                    if (state.currentQuestion >= settings.questions) {
-                        endGame();
-                    } else {
-                        nextBtn.style.display = 'block';
-                    }
+                    // Auto proceed to next question after 5 seconds
+                    clearTimeout(state.nextQuestionTimer);
+                    state.nextQuestionTimer = setTimeout(() => {
+                        nextQuestion();
+                    }, 5000);
                 }
             }, settings.timePerQuestion * 1000);
         }
@@ -560,23 +568,17 @@
         // End the game and show results
         function endGame() {
             state.gameActive = false;
+            clearTimeout(state.timer);
+            clearTimeout(state.nextQuestionTimer);
             
-            let message;
-            const scorePercent = (state.score / (settings.questions * settings.level * 10)) * 100;
+            let message = `Game Over! You scored ${state.score} points and answered ${state.currentQuestion} questions! 🌟`;
             
-            if (scorePercent >= 80) {
-                message = `Amazing! You scored ${state.score} points! 🌟`;
-                if (settings.level < 3) {
-                    settings.level++;
-                    levelEl.textContent = settings.level;
-                    levelIndicator.textContent = settings.level;
-                    message += ' You leveled up! 🎮';
-                    createConfetti(50);
-                }
-            } else if (scorePercent >= 60) {
-                message = `Good job! You scored ${state.score} points! 👍`;
-            } else {
-                message = `You scored ${state.score} points. Keep practicing! 💪`;
+            // Level up based on questions answered rather than percentage
+            if (state.currentQuestion >= 20 && settings.level < 3) {
+                settings.level++;
+                levelIndicator.textContent = settings.level;
+                message += ' You leveled up! 🎮';
+                createConfetti(50);
             }
             
             problemEl.textContent = 'Game Over!';
@@ -586,7 +588,6 @@
             
             startBtn.textContent = 'Play Again';
             startBtn.style.display = 'block';
-            nextBtn.style.display = 'none';
         }
         
         // Update progress bar
@@ -630,16 +631,16 @@
         function startGame() {
             state.score = 0;
             state.currentQuestion = 0;
+            state.lives = 3;
             state.gameActive = true;
             
             scoreEl.textContent = state.score;
             currentQuestionEl.textContent = state.currentQuestion;
-            totalQuestionsEl.textContent = settings.questions;
+            livesEl.textContent = state.lives;
             progressEl.style.width = '0%';
             
             messageEl.textContent = '';
             startBtn.style.display = 'none';
-            nextBtn.style.display = 'none';
             
             displayProblem();
         }
@@ -647,17 +648,14 @@
         // Next question
         function nextQuestion() {
             messageEl.textContent = '';
-            nextBtn.style.display = 'none';
             displayProblem();
         }
         
         // Event listeners
         startBtn.addEventListener('click', startGame);
-        nextBtn.addEventListener('click', nextQuestion);
         
         // Initialize the game
-        totalQuestionsEl.textContent = settings.questions;
-        levelEl.textContent = settings.level;
+        livesEl.textContent = state.lives;
         levelIndicator.textContent = settings.level;
     </script>
 </body>
