@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Orientation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .sensor-block {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .status {
+            color: #666;
+            font-style: italic;
+        }
+        #request-log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Device Orientation Data</h1>
+    
+    <div class="sensor-block" id="permissions">
+        <h2>Sensor Access</h2>
+        <p class="status" id="permission-status">Permission not granted</p>
+        <button id="request-permission">Request Orientation Access</button>
+    </div>
+
+    <div class="sensor-block">
+        <h2>Device Orientation</h2>
+        <p>Alpha (z-axis): <span class="value" id="alpha">--</span>°</p>
+        <p>Beta (x-axis): <span class="value" id="beta">--</span>°</p>
+        <p>Gamma (y-axis): <span class="value" id="gamma">--</span>°</p>
+    </div>
+
+    <div class="sensor-block">
+        <h2>Request Log</h2>
+        <div id="request-log">No requests sent yet.</div>
+    </div>
+
+    <script>
+        const permissionBtn = document.getElementById('request-permission');
+        const permissionStatus = document.getElementById('permission-status');
+        const alphaValue = document.getElementById('alpha');
+        const betaValue = document.getElementById('beta');
+        const gammaValue = document.getElementById('gamma');
+        const requestLog = document.getElementById('request-log');
+
+        let deviceOrientationGranted = false;
+        let lastSentValues = {alpha: null, beta: null, gamma: null};
+        let sendingRequest = false;
+        let requestDebounceTimer = null;
+
+        function handleOrientation(event) {
+            const alpha = event.alpha ? event.alpha.toFixed(2) : '--';
+            const beta = event.beta ? event.beta.toFixed(2) : '--'; 
+            const gamma = event.gamma ? event.gamma.toFixed(2) : '--';
+            
+            alphaValue.textContent = alpha;
+            betaValue.textContent = beta;
+            gammaValue.textContent = gamma;
+            
+            if (alpha !== '--' && beta !== '--' && gamma !== '--') {
+                sendOrientationData(alpha, beta, gamma);
+            }
+        }
+
+        function sendOrientationData(alpha, beta, gamma) {
+            // Prevent sending identical values
+            if (
+                lastSentValues.alpha === alpha && 
+                lastSentValues.beta === beta && 
+                lastSentValues.gamma === gamma
+            ) {
+                return;
+            }
+            
+            // Debounce requests to avoid flooding
+            if (requestDebounceTimer) {
+                clearTimeout(requestDebounceTimer);
+            }
+            
+            requestDebounceTimer = setTimeout(() => {
+                if (sendingRequest) return;
+                
+                sendingRequest = true;
+                 
+                fetch('http://192.168.109.127:8090/api/collections/lidar/records', {
+        		  method: 'POST',
+        		  headers: {
+        			'Content-Type': 'application/json',
+        		  },
+        		  body: JSON.stringify({
+        			x: beta,
+        			y: gamma,
+        			z: alpha
+        		  })
+        		})
+            }, 200); // Send at most once every 200ms
+        }
+
+        async function requestOrientationPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        permissionStatus.textContent = "Orientation permission granted";
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        deviceOrientationGranted = true;
+                        permissionBtn.disabled = true;
+                        permissionBtn.textContent = "Orientation Access Granted";
+                    } else {
+                        permissionStatus.textContent = "Orientation permission denied";
+                    }
+                } catch (error) {
+                    permissionStatus.textContent = "Error requesting orientation permission: " + error;
+                }
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+                deviceOrientationGranted = true;
+                permissionStatus.textContent = "Orientation available without permission (non-iOS)";
+                permissionBtn.disabled = true;
+                permissionBtn.textContent = "Orientation Access Granted";
+            }
+        }
+
+        permissionBtn.addEventListener('click', async () => {
+            await requestOrientationPermission();
+        });
+
+        // For devices that don't require permission
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.DeviceOrientationEvent) {
+                if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    deviceOrientationGranted = true;
+                    permissionStatus.textContent = "Orientation available without permission (non-iOS)";
+                    permissionBtn.disabled = true;
+                    permissionBtn.textContent = "Orientation Access Granted";
+                }
+            } else {
+                permissionStatus.textContent = "Device orientation not supported";
+                permissionBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
