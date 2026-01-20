@@ -320,7 +320,6 @@
           await navigator.clipboard.writeText(outputUrl.value);
           showToast("Link copied!");
         } catch (err) {
-          // Fallback for older browsers
           outputUrl.select();
           document.execCommand("copy");
           showToast("Link copied!");
@@ -340,8 +339,8 @@
           }
         });
       } else {
-        // btnShare.classList.add("hidden");
-        // btnCopy.style.width = "100%";
+        btnShare.classList.add("hidden");
+        btnCopy.style.width = "100%";
       }
 
       function showToast(msg) {
