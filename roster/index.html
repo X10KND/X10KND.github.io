@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complex School Schedule Creator</title>
+<style>
+    :root {
+        --primary: #2563eb;
+        --bg: #f8fafc;
+        --border: #e2e8f0;
+        --text: #1e293b;
+        --hover: #f1f5f9;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 20px;
+    }
+    h1, h2, h3 { margin-top: 0; }
+    .container {
+        margin: 0 auto;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid var(--border);
+    }
+    .sidebar { flex: 1; min-width: 300px; max-width: 400px; }
+    .main-content { flex: 3; min-width: 800px; overflow-x: auto; }
+    
+    /* Forms & Inputs */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-size: 0.9em; margin-bottom: 5px; font-weight: 500; }
+    input[type="text"], input[type="month"], select, button {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        background: var(--hover);
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+    }
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+        font-weight: normal;
+        font-size: 0.85em;
+        cursor: pointer;
+    }
+    .checkbox-group input {
+        margin-right: 4px;
+        width: auto;
+    }
+
+    button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    button:hover { opacity: 0.9; }
+    .btn-secondary { background-color: #64748b; }
+    .btn-danger { background-color: #ef4444; width: auto; padding: 4px 8px; font-size: 0.8em; margin:0;}
+    .btn-edit { background-color: #f59e0b; width: auto; padding: 4px 8px; font-size: 0.8em; margin:0;}
+
+    /* Table */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: 0.85em;
+    }
+    th, td {
+        border: 1px solid var(--border);
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+    th { background-color: var(--hover); }
+    td.droppable { min-height: 40px; }
+    
+    /* Draggable Items */
+    .teacher-pill {
+        display: inline-block;
+        background-color: #e0e7ff;
+        color: #3730a3;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.9em;
+        margin: 2px;
+        cursor: grab;
+        user-select: none;
+        border: 1px solid #c7d2fe;
+    }
+    .teacher-pill:active { cursor: grabbing; }
+    
+    .teacher-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9em;
+    }
+    .flex-row { display: flex; gap: 10px; align-items: flex-end; }
+    .actions { display: flex; gap: 10px; margin-bottom: 20px;}
+    
+    /* Duty Cell specific styling */
+    .duty-cell {
+        min-height: 30px;
+        background: #fafafa;
+        border: 1px dashed #ccc;
+        border-radius: 4px;
+        padding: 4px;
+    }
+    .duty-cell.drag-over { background: #e2e8f0; border-color: var(--primary); }
+    .full-names-list { margin: 0; padding-left: 20px; }
+	
+	.priority-col { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="panel sidebar">
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="t-name" placeholder="e.g. Asef Jamil Ajwad">
+        </div>
+        <div class="form-group">
+            <label>Nickname</label>
+            <input type="text" id="t-nick" placeholder="e.g. Jalma">
+        </div>
+        
+        <div class="form-group">
+            <label>G1 Preferred Days (Optional)</label>
+            <div class="checkbox-group" id="t-pref">
+                <label><input type="checkbox" value="0"> Sun</label>
+                <label><input type="checkbox" value="1"> Mon</label>
+                <label><input type="checkbox" value="2"> Tue</label>
+                <label><input type="checkbox" value="3"> Wed</label>
+                <label><input type="checkbox" value="4"> Thu</label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>G1 Avoid Days (Optional)</label>
+            <div class="checkbox-group" id="t-avoid">
+                <label><input type="checkbox" value="0"> Sun</label>
+                <label><input type="checkbox" value="1"> Mon</label>
+                <label><input type="checkbox" value="2"> Tue</label>
+                <label><input type="checkbox" value="3"> Wed</label>
+                <label><input type="checkbox" value="4"> Thu</label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Pair With (Optional)</label>
+            <select id="t-pair"><option value="">None</option></select>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button id="submit-btn" onclick="saveTeacher()">Add Teacher</button>
+            <button id="cancel-btn" class="btn-secondary" style="display: none;" onclick="cancelEdit()">Cancel</button>
+        </div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+        
+        <h3>Available Teachers (Drag from here)</h3>
+        <div id="draggable-pool" style="min-height: 50px; background: #fafafa; padding: 10px; border-radius: 4px; border: 1px solid #ccc;"></div>
+        
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+        
+        <h3 style="margin-top: 20px;">Teachers List</h3>
+        <div id="teacher-list"></div>
+    </div>
+
+    <div class="panel main-content">
+        <h2>Day Shift Faculties’ Duty Roster</h2>
+		<p>Double click on name to remove</p>
+        <div class="actions">
+            <div class="flex-row">
+                <div class="form-group" style="margin:0;">
+                    <label>Select Month</label>
+                    <input type="month" id="month-select" onchange="initializeMonth()">
+                </div>
+            </div>
+            <button class="btn-secondary" onclick="autoSchedule()" style="margin:0; width:auto; align-self:flex-end;">Auto-Fill Schedule</button>
+            <button class="btn-danger" onclick="clearSchedule()" style="margin:0; width:auto; align-self:flex-end;">Clear Schedule</button>
+        </div>
+
+        <div id="table-container">
+            </div>
+    </div>
+</div>
+
+<script>
+    // --- STATE MANAGEMENT ---
+    let rawTeachers = JSON.parse(localStorage.getItem('teachers')) || [];
+    let teachers = rawTeachers.map(t => {
+        if(typeof t.pref === 'string') t.pref = t.pref !== "" ? [parseInt(t.pref)] : [];
+        if(typeof t.avoid === 'string') t.avoid = t.avoid !== "" ? [parseInt(t.avoid)] : [];
+        return t;
+    });
+    
+    let schedule = JSON.parse(localStorage.getItem('schedule')) || {};
+    let excludedDates = JSON.parse(localStorage.getItem('excludedDates')) || [];
+    let currentMonth = localStorage.getItem('currentMonth') || "";
+    
+    let editingId = null; // Tracks the ID of the teacher currently being edited
+
+    const dutyColumns = [
+        { id: 'g1', name: 'G1', req: 2 },
+        { id: 'tinshed', name: 'Tin Shed', req: 2 },
+        { id: 'floor1', name: 'Floor 1', req: 1 },
+        { id: 'floor2', name: 'Floor 2', req: 1 },
+        { id: 'lift', name: 'In front of lift', req: 1 },
+        { id: 'canteen', name: 'In front of Canteen', req: 1 },
+        { id: 'late', name: 'Recording Late Students', req: 1 },
+        { id: 'waiting', name: 'Waiting Room Duty', req: 2 }
+    ];
+
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu"];
+
+    // --- INITIALIZATION ---
+    window.onload = () => {
+        if (currentMonth) {
+            document.getElementById('month-select').value = currentMonth;
+            renderTable();
+        }
+        renderTeachers();
+        updatePairOptions();
+        renderPool();
+    };
+
+    function saveData() {
+        localStorage.setItem('teachers', JSON.stringify(teachers));
+        localStorage.setItem('schedule', JSON.stringify(schedule));
+        localStorage.setItem('excludedDates', JSON.stringify(excludedDates));
+        localStorage.setItem('currentMonth', currentMonth);
+    }
+
+    // --- TEACHER MANAGEMENT ---
+    function saveTeacher() {
+        const name = document.getElementById('t-name').value.trim();
+        const nick = document.getElementById('t-nick').value.trim();
+        const pairId = document.getElementById('t-pair').value;
+
+        const prefNodes = document.querySelectorAll('#t-pref input:checked');
+        const pref = Array.from(prefNodes).map(n => parseInt(n.value));
+        
+        const avoidNodes = document.querySelectorAll('#t-avoid input:checked');
+        const avoid = Array.from(avoidNodes).map(n => parseInt(n.value));
+
+        if (!name || !nick) return alert("Name and Nickname are required.");
+
+        if (editingId) {
+            // --- EDIT EXISTING TEACHER ---
+            const t = teachers.find(x => x.id === editingId);
+            if (!t) return cancelEdit();
+
+            // Handle un-pairing old partner if pair changed
+            if (t.pair && t.pair !== pairId) {
+                const oldPartner = teachers.find(p => p.id === t.pair);
+                if (oldPartner) oldPartner.pair = "";
+            }
+
+            t.name = name;
+            t.nick = nick;
+            t.pref = pref;
+            t.avoid = avoid;
+
+            // Handle new 2-way pair
+            if (pairId) {
+                const targetPartner = teachers.find(x => x.id === pairId);
+                if (targetPartner) {
+                    if (targetPartner.pair && targetPartner.pair !== t.id) {
+                        const oldPartnerOfNew = teachers.find(p => p.id === targetPartner.pair);
+                        if (oldPartnerOfNew) oldPartnerOfNew.pair = "";
+                    }
+                    targetPartner.pair = t.id;
+                }
+            }
+            t.pair = pairId;
+
+        } else {
+            // --- ADD NEW TEACHER ---
+            const id = 't_' + Date.now();
+            
+            // Handle 2-way pairing for new teacher
+            if (pairId) {
+                const targetPartner = teachers.find(t => t.id === pairId);
+                if (targetPartner) {
+                    if (targetPartner.pair) {
+                        const oldPartner = teachers.find(t => t.id === targetPartner.pair);
+                        if (oldPartner) oldPartner.pair = "";
+                    }
+                    targetPartner.pair = id;
+                }
+            }
+            teachers.push({ id, name, nick, pref, avoid, pair: pairId });
+        }
+        
+        cancelEdit(); // This resets the form
+        saveData();
+        renderTeachers();
+        renderPool();
+        
+        // Render table to reflect possible nickname changes
+        if(currentMonth) renderTable(); 
+    }
+
+    function editTeacher(id) {
+        const t = teachers.find(x => x.id === id);
+        if (!t) return;
+        
+        editingId = id;
+        document.getElementById('t-name').value = t.name;
+        document.getElementById('t-nick').value = t.nick;
+        
+        document.querySelectorAll('#t-pref input').forEach(n => n.checked = t.pref.includes(parseInt(n.value)));
+        document.querySelectorAll('#t-avoid input').forEach(n => n.checked = t.avoid.includes(parseInt(n.value)));
+        
+        updatePairOptions(); // Excludes currently editing teacher from dropdown
+        document.getElementById('t-pair').value = t.pair || "";
+        
+        document.getElementById('submit-btn').innerText = 'Update Teacher';
+        document.getElementById('cancel-btn').style.display = 'block';
+    }
+
+    function cancelEdit() {
+        editingId = null;
+        document.getElementById('t-name').value = '';
+        document.getElementById('t-nick').value = '';
+        document.querySelectorAll('#t-pref input').forEach(n => n.checked = false);
+        document.querySelectorAll('#t-avoid input').forEach(n => n.checked = false);
+        
+        updatePairOptions();
+        document.getElementById('t-pair').value = '';
+        
+        document.getElementById('submit-btn').innerText = 'Add Teacher';
+        document.getElementById('cancel-btn').style.display = 'none';
+    }
+
+    function removeTeacher(id) {
+        const teacherToRemove = teachers.find(t => t.id === id);
+        if (teacherToRemove && teacherToRemove.pair) {
+            const partner = teachers.find(t => t.id === teacherToRemove.pair);
+            if (partner) partner.pair = "";
+        }
+
+        teachers = teachers.filter(t => t.id !== id);
+        
+        if (editingId === id) cancelEdit(); // Cancel edit if they delete the currently editing teacher
+        
+        saveData();
+        renderTeachers();
+        updatePairOptions();
+        renderPool();
+    }
+
+    function renderTeachers() {
+        const list = document.getElementById('teacher-list');
+        list.innerHTML = teachers.map(t => {
+            const prefs = t.pref && t.pref.length > 0 ? t.pref.map(d => shortDayNames[d]).join(', ') : 'None';
+            const avoids = t.avoid && t.avoid.length > 0 ? t.avoid.map(d => shortDayNames[d]).join(', ') : 'None';
+            
+            const partner = t.pair ? teachers.find(x => x.id === t.pair) : null;
+            const pairedWith = partner ? partner.name : 'None';
+            
+            return `
+            <div class="teacher-list-item">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <span><strong>${t.name}</strong> (${t.nick})</span>
+                    <span style="font-size: 0.85em; color: #64748b;">
+                        Prefers: ${prefs} | Avoids: ${avoids} <br>
+                        <strong>Paired with:</strong> <span style="color:var(--primary);">${pairedWith}</span>
+                    </span>
+                </div>
+                <div>
+                    <button class="btn-edit" onclick="editTeacher('${t.id}')">Edit</button>
+                    <button class="btn-danger" onclick="removeTeacher('${t.id}')">Del</button>
+                </div>
+            </div>
+        `}).join('');
+    }
+
+    function updatePairOptions() {
+        const select = document.getElementById('t-pair');
+        // Exclude the teacher being currently edited so they can't pair with themselves
+        const availablePartners = teachers.filter(t => t.id !== editingId);
+        select.innerHTML = '<option value="">None</option>' + availablePartners.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+
+    // --- DRAG AND DROP POOL ---
+    function renderPool() {
+        const pool = document.getElementById('draggable-pool');
+        pool.innerHTML = teachers.map(t => `
+            <div class="teacher-pill" draggable="true" ondragstart="drag(event, '${t.id}')" id="pill-${t.id}">
+                ${t.nick}
+            </div>
+        `).join('');
+    }
+
+    function drag(ev, teacherId) {
+        ev.dataTransfer.setData("teacherId", teacherId);
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('drag-over');
+    }
+
+    function dragLeave(ev) {
+        ev.currentTarget.classList.remove('drag-over');
+    }
+
+    function drop(ev, dateStr, dutyId) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('drag-over');
+        const teacherId = ev.dataTransfer.getData("teacherId");
+        
+        if(!schedule[dateStr]) schedule[dateStr] = {};
+        if(!schedule[dateStr][dutyId]) schedule[dateStr][dutyId] = [];
+        
+        if(!schedule[dateStr][dutyId].includes(teacherId)) {
+            schedule[dateStr][dutyId].push(teacherId);
+            saveData();
+            renderTable();
+        }
+    }
+
+    function removeDuty(dateStr, dutyId, teacherId) {
+        if(schedule[dateStr] && schedule[dateStr][dutyId]) {
+            schedule[dateStr][dutyId] = schedule[dateStr][dutyId].filter(id => id !== teacherId);
+            saveData();
+            renderTable();
+        }
+    }
+
+    // --- TABLE MANAGEMENT ---
+    function initializeMonth() {
+        currentMonth = document.getElementById('month-select').value;
+        saveData();
+        renderTable();
+    }
+
+    function toggleDate(dateStr) {
+        if (excludedDates.includes(dateStr)) {
+            excludedDates = excludedDates.filter(d => d !== dateStr);
+        } else {
+            excludedDates.push(dateStr);
+            delete schedule[dateStr]; 
+        }
+        saveData();
+        renderTable();
+    }
+
+    function clearSchedule() {
+        //if(confirm("Clear all assignments for this month?")) {
+            if(!currentMonth) return;
+            const [year, month] = currentMonth.split('-');
+            const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
+            validDays.forEach(day => {
+                delete schedule[day.dateStr];
+            });
+            saveData();
+            renderTable();
+        //}
+    }
+
+    function getDaysInMonth(year, month) {
+        const date = new Date(year, month, 1, 12, 0, 0);
+        const days = [];
+        while (date.getMonth() === month) {
+            if (date.getDay() >= 0 && date.getDay() <= 4) {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                days.push({
+                    dateStr: `${y}-${m}-${d}`,
+                    dayName: dayNames[date.getDay()],
+                    dayIndex: date.getDay(),
+                    dateObj: new Date(date)
+                });
+            }
+            date.setDate(date.getDate() + 1);
+        }
+        return days;
+    }
+
+    function renderTable() {
+        if (!currentMonth) return;
+        const [year, month] = currentMonth.split('-');
+        const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
+        
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th>Day, Date & Time</th>
+                    <th class="priority-col">Name of the Teachers</th>
+                    ${dutyColumns.map(d => `<th>${d.name}</th>`).join('')}
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        validDays.forEach(day => {
+            const isExcluded = excludedDates.includes(day.dateStr);
+            
+            if (isExcluded) {
+                html += `<tr style="background:#fee2e2; opacity: 0.7;">
+                    <td>${day.dayName}, ${day.dateStr}</td>
+                    <td colspan="${dutyColumns.length + 1}" style="text-align:center;">Date Excluded (Holiday/Closed)</td>
+                    <td><button class="btn-secondary" style="margin:0; padding:4px;" onclick="toggleDate('${day.dateStr}')">Add Back</button></td>
+                </tr>`;
+                return;
+            }
+
+            const dailySched = schedule[day.dateStr] || {};
+            
+            let activeTeachers = new Set();
+            dutyColumns.forEach(c => {
+                if(dailySched[c.id]) dailySched[c.id].forEach(tid => activeTeachers.add(tid));
+            });
+            
+            let fullNamesHtml = "<ol class='full-names-list'>";
+            activeTeachers.forEach(tid => {
+                const t = teachers.find(x => x.id === tid);
+                if(t) fullNamesHtml += `<li>${t.name}</li>`;
+            });
+            fullNamesHtml += "</ol>";
+
+            html += `<tr>
+                <td><strong>${day.dayName}</strong><br>${day.dateStr}</td>
+                <td class="priority-col">${fullNamesHtml}</td>`;
+                
+            dutyColumns.forEach(duty => {
+                const assigned = dailySched[duty.id] || [];
+                let pills = assigned.map(tid => {
+                    const t = teachers.find(x => x.id === tid);
+                    if(!t) return '';
+                    return `<span class="teacher-pill" ondblclick="removeDuty('${day.dateStr}', '${duty.id}', '${tid}')" title="Double click to remove">${t.nick}</span>`;
+                }).join('');
+
+                html += `<td class="duty-cell" 
+                            ondragover="allowDrop(event)" 
+                            ondragleave="dragLeave(event)" 
+                            ondrop="drop(event, '${day.dateStr}', '${duty.id}')">
+                            ${pills}
+                        </td>`;
+            });
+
+            html += `<td><button class="btn-danger" onclick="toggleDate('${day.dateStr}')">&times;</button></td></tr>`;
+        });
+
+        html += `</tbody></table>`;
+        document.getElementById('table-container').innerHTML = html;
+    }
+
+    // --- AUTO-SCHEDULING ALGORITHM ---
+    function autoSchedule() {
+        if (!currentMonth || teachers.length === 0) return alert("Select a month and add teachers first.");
+        const [year, month] = currentMonth.split('-');
+        const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
+
+        const getWeek = (dateObj) => {
+            const firstDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+            return Math.ceil((dateObj.getDate() + firstDay.getDay()) / 7);
+        };
+
+        let g1History = {}; 
+        let waitingRoomWeekly = {}; 
+
+        validDays.forEach(day => {
+            const daily = schedule[day.dateStr] || {};
+            const week = getWeek(day.dateObj);
+            if(!waitingRoomWeekly[week]) waitingRoomWeekly[week] = [];
+            
+            if(daily.waiting) daily.waiting.forEach(t => waitingRoomWeekly[week].push(t));
+            if(daily.g1) daily.g1.forEach(t => g1History[t] = day.dateObj.getTime());
+        });
+
+        validDays.forEach(day => {
+            if (excludedDates.includes(day.dateStr)) return;
+            if (!schedule[day.dateStr]) schedule[day.dateStr] = {};
+            const daily = schedule[day.dateStr];
+
+            const assign = (duty, num, pool) => {
+                if (!daily[duty]) daily[duty] = [];
+                let needed = num - daily[duty].length;
+                while (needed > 0 && pool.length > 0) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    const t = pool.splice(idx, 1)[0];
+                    if(!daily[duty].includes(t.id)) {
+                        daily[duty].push(t.id);
+                        needed--;
+                    }
+                }
+            };
+
+            let dailyPool = [...teachers]; 
+
+            let floor1Person = daily.floor1 ? daily.floor1[0] : null;
+            if(!floor1Person) {
+                const t = dailyPool.splice(Math.floor(Math.random()*dailyPool.length), 1)[0];
+                if(t) {
+                    daily.floor1 = [t.id];
+                    daily.lift = [t.id];
+                    floor1Person = t.id;
+                }
+            } else {
+                daily.lift = [floor1Person]; 
+                dailyPool = dailyPool.filter(t => t.id !== floor1Person);
+            }
+
+            let canteenPerson = daily.canteen ? daily.canteen[0] : null;
+            if(!canteenPerson) {
+                const t = dailyPool.splice(Math.floor(Math.random()*dailyPool.length), 1)[0];
+                if(t) {
+                    daily.canteen = [t.id];
+                    daily.late = [t.id];
+                    canteenPerson = t.id;
+                }
+            } else {
+                daily.late = [canteenPerson];
+                dailyPool = dailyPool.filter(t => t.id !== canteenPerson);
+            }
+
+            if(!daily.tinshed) daily.tinshed = [];
+            dailyPool = dailyPool.filter(t => !daily.tinshed.includes(t.id));
+            assign('tinshed', 2, dailyPool);
+
+            if(!daily.waiting) daily.waiting = [];
+            const waitingPoolCandidates = [
+                ...(daily.tinshed || []),
+                floor1Person,
+                canteenPerson
+            ].filter(Boolean);
+
+            let waitingObjPool = waitingPoolCandidates.map(id => teachers.find(t => t.id === id));
+            waitingObjPool = waitingObjPool.filter(t => t && !daily.waiting.includes(t.id));
+            assign('waiting', 2, waitingObjPool);
+
+            const week = getWeek(day.dateObj);
+            if(!waitingRoomWeekly[week]) waitingRoomWeekly[week] = [];
+            daily.waiting.forEach(id => waitingRoomWeekly[week].push(id));
+
+            assign('floor2', 1, dailyPool);
+
+            // --- Assign G1 (2) ---
+            if(!daily.g1) daily.g1 = [];
+            let g1Needed = 2 - daily.g1.length;
+            
+            if (g1Needed > 0) {
+                let g1Pool = teachers.filter(t => {
+                    if (daily.g1.includes(t.id)) return false; 
+                    if (waitingRoomWeekly[week] && waitingRoomWeekly[week].includes(t.id)) return false;
+                    if (t.avoid && t.avoid.includes(day.dayIndex)) return false;
+                    return true;
+                });
+
+                g1Pool.sort((a, b) => {
+                    let aPref = (a.pref && a.pref.includes(day.dayIndex)) ? 1 : 0;
+                    let bPref = (b.pref && b.pref.includes(day.dayIndex)) ? 1 : 0;
+                    if (aPref !== bPref) return bPref - aPref;
+
+                    let aHist = g1History[a.id] || 0;
+                    let bHist = g1History[b.id] || 0;
+                    return aHist - bHist; 
+                });
+
+                while (g1Needed > 0 && g1Pool.length > 0) {
+                    let selected = g1Pool.shift();
+                    daily.g1.push(selected.id);
+                    g1History[selected.id] = day.dateObj.getTime();
+                    g1Needed--;
+
+                    if (g1Needed > 0 && selected.pair) {
+                        const partnerIdx = g1Pool.findIndex(t => t.id === selected.pair);
+                        if (partnerIdx > -1) {
+                            let partner = g1Pool.splice(partnerIdx, 1)[0];
+                            daily.g1.push(partner.id);
+                            g1History[partner.id] = day.dateObj.getTime();
+                            g1Needed--;
+                        }
+                    }
+                }
+            }
+        });
+
+        saveData();
+        renderTable();
+        alert("Auto-scheduling complete. Check table for results.");
+    }
+</script>
+</body>
+</html>
