@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Complex School Schedule Creator</title>
+<title>Day Shift Faculties’ Duty Roster</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
     :root {
         --primary: #2563eb;
@@ -81,6 +82,7 @@
     .btn-secondary { background-color: #64748b; }
     .btn-danger { background-color: #ef4444; width: auto; padding: 4px 8px; font-size: 0.8em; margin:0;}
     .btn-edit { background-color: #f59e0b; width: auto; padding: 4px 8px; font-size: 0.8em; margin:0;}
+    .btn-success { background-color: #10b981; width: auto; padding: 8px 16px; margin:0;}
 
     /* Table */
     table {
@@ -122,7 +124,7 @@
         font-size: 0.9em;
     }
     .flex-row { display: flex; gap: 10px; align-items: flex-end; }
-    .actions { display: flex; gap: 10px; margin-bottom: 20px;}
+    .actions { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap;}
     
     /* Duty Cell specific styling */
     .duty-cell {
@@ -135,7 +137,7 @@
     .duty-cell.drag-over { background: #e2e8f0; border-color: var(--primary); }
     .full-names-list { margin: 0; padding-left: 20px; }
 	
-	.priority-col { white-space: nowrap; }		   
+	.priority-col { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -210,8 +212,10 @@
                     <input type="month" id="month-select" onchange="initializeMonth()">
                 </div>
             </div>
-            <button class="btn-secondary" onclick="autoSchedule()" style="margin:0; width:auto; align-self:flex-end;">Auto-Fill Schedule</button>
-            <button class="btn-danger" onclick="clearSchedule()" style="margin:0; width:auto; align-self:flex-end;">Clear Schedule</button>
+            <button class="btn-secondary" onclick="autoSchedule()" style="margin:0; width:auto;">Auto-Fill Schedule</button>
+            <button class="btn-danger" onclick="clearSchedule()" style="margin:0; width:auto; padding: 8px 16px; font-size: 1em;">Clear Schedule</button>
+            
+            <button class="btn-success" onclick="exportToExcel()" style="margin-left: auto;">Save as XLSX</button>
         </div>
 
         <div id="table-container">
@@ -225,7 +229,7 @@
     let teachers = rawTeachers.map(t => {
         if(typeof t.pref === 'string') t.pref = t.pref !== "" ? [parseInt(t.pref)] : [];
         if(typeof t.avoid === 'string') t.avoid = t.avoid !== "" ? [parseInt(t.avoid)] : [];
-        t.isKG = t.isKG || false; // Migration mapping for new variable
+        t.isKG = t.isKG || false;
         return t;
     });
     
@@ -587,7 +591,6 @@
         const [year, month] = currentMonth.split('-');
         const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
         
-        // Find how many days are in the selected month for Last Wednesday calculation
         const daysInMonthTotal = new Date(parseInt(year), parseInt(month), 0).getDate();
 
         const getWeek = (dateObj) => {
@@ -598,7 +601,6 @@
         let g1History = {}; 
         let waitingRoomWeekly = {}; 
         
-        // Pre-select 5 random teachers for the month to act as the Floor 2 Team
         let floor2Team = [...teachers].sort(() => 0.5 - Math.random()).slice(0, 5);
         let floor2Queue = [...floor2Team];
 
@@ -616,7 +618,6 @@
             if (!schedule[day.dateStr]) schedule[day.dateStr] = {};
             const daily = schedule[day.dateStr];
             
-            // Check if today is the Last Wednesday of the Month
             const isLastWednesday = day.dayIndex === 3 && (day.dateObj.getDate() + 7 > daysInMonthTotal);
 
             const assign = (duty, num, pool) => {
@@ -664,7 +665,6 @@
             dailyPool = dailyPool.filter(t => !daily.tinshed.includes(t.id));
             assign('tinshed', 2, dailyPool);
 
-            // --- Assign Waiting Room with KG Rule ---
             if(!daily.waiting) daily.waiting = [];
             const waitingPoolCandidates = [
                 ...(daily.tinshed || []),
@@ -675,13 +675,12 @@
             let waitingObjPool = waitingPoolCandidates.map(id => teachers.find(t => t.id === id));
             waitingObjPool = waitingObjPool.filter(t => {
                 if (!t || daily.waiting.includes(t.id)) return false;
-                if (isLastWednesday && t.isKG) return false; // NEW: Block KG on Last Wednesday
+                if (isLastWednesday && t.isKG) return false;
                 return true;
             });
             
             assign('waiting', 2, waitingObjPool);
             
-            // If filtering out KG teachers caused us to miss our 2-person requirement, fill in from general pool
             if (daily.waiting.length < 2) {
                 let fallbackPool = dailyPool.filter(t => {
                     if (daily.waiting.includes(t.id)) return false;
@@ -695,12 +694,10 @@
             if(!waitingRoomWeekly[week]) waitingRoomWeekly[week] = [];
             daily.waiting.forEach(id => waitingRoomWeekly[week].push(id));
 
-            // --- Assign Floor 2 from Dedicated 5-Person Queue ---
             if(!daily.floor2) daily.floor2 = [];
             let f2Needed = 1 - daily.floor2.length;
             if (f2Needed > 0) {
                 let assignedIdx = -1;
-                // Find the first available person in the Floor 2 rotation queue
                 for (let i = 0; i < floor2Queue.length; i++) {
                     let candidate = floor2Queue[i];
                     if (dailyPool.some(t => t.id === candidate.id)) {
@@ -710,18 +707,15 @@
                     }
                 }
                 
-                // If we found someone, cycle them to the back of the queue
                 if (assignedIdx > -1) {
                     let assignedT = floor2Queue.splice(assignedIdx, 1)[0];
                     floor2Queue.push(assignedT);
                     dailyPool = dailyPool.filter(t => t.id !== assignedT.id);
                 } else {
-                    // Fallback if all 5 are somehow occupied/excluded today
                     assign('floor2', 1, dailyPool);
                 }
             }
 
-            // --- Assign G1 (2) ---
             if(!daily.g1) daily.g1 = [];
             let g1Needed = 2 - daily.g1.length;
             
@@ -765,6 +759,67 @@
         saveData();
         renderTable();
         alert("Auto-scheduling complete. Check table for results.");
+    }
+
+    // --- NEW EXPORT LOGIC ---
+    function exportToExcel() {
+        if (!currentMonth) return alert("Please select a month first to export.");
+        
+        const [year, month] = currentMonth.split('-');
+        const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
+        
+        // Build 2D array for the Excel Sheet
+        let exportData = [];
+        
+        // 1. Set Headers
+        let headers = ['Day & Date', 'Name of the Teachers', ...dutyColumns.map(d => d.name)];
+        exportData.push(headers);
+        
+        // 2. Loop through each day and build rows
+        validDays.forEach(day => {
+            let row = [];
+            row.push(`${day.dayName}, ${day.dateStr}`);
+            
+            if (excludedDates.includes(day.dateStr)) {
+                // Formatting for excluded days
+                row.push('Date Excluded (Holiday/Closed)');
+                for(let i=0; i<dutyColumns.length; i++) row.push(''); 
+            } else {
+                const dailySched = schedule[day.dateStr] || {};
+                
+                // Get all active teachers for the 'Name of the Teachers' column
+                let activeTeachers = new Set();
+                dutyColumns.forEach(c => {
+                    if(dailySched[c.id]) dailySched[c.id].forEach(tid => activeTeachers.add(tid));
+                });
+                
+                let fullNames = Array.from(activeTeachers).map(tid => {
+                    const t = teachers.find(x => x.id === tid);
+                    return t ? t.name : '';
+                }).filter(Boolean).join(', ');
+                
+                row.push(fullNames);
+                
+                // Get assigned teachers for each duty column
+                dutyColumns.forEach(duty => {
+                    const assigned = dailySched[duty.id] || [];
+                    let names = assigned.map(tid => {
+                        const t = teachers.find(x => x.id === tid);
+                        return t ? t.nick : '';
+                    }).filter(Boolean).join(', ');
+                    
+                    row.push(names);
+                });
+            }
+            exportData.push(row);
+        });
+        
+        // 3. Create Workbook and save using SheetJS
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Schedule");
+        
+        XLSX.writeFile(wb, `Duty_Schedule_${currentMonth}.xlsx`);
     }
 </script>
 </body>
