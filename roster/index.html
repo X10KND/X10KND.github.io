@@ -567,7 +567,7 @@
                 let pills = assigned.map(tid => {
                     const t = teachers.find(x => x.id === tid);
                     if(!t) return '';
-                    return `<span class="teacher-pill" ondblclick="removeDuty('${day.dateStr}', '${duty.id}', '${tid}')" title="Double click to remove">${t.nick} &times;</span>`;
+                    return `<span class="teacher-pill" ondblclick="removeDuty('${day.dateStr}', '${duty.id}', '${tid}')" title="Double click to remove">${t.nick} </span>`;
                 }).join('');
 
                 html += `<td class="duty-cell" 
@@ -793,10 +793,10 @@
                     if(dailySched[c.id]) dailySched[c.id].forEach(tid => activeTeachers.add(tid));
                 });
                 
-                let fullNames = Array.from(activeTeachers).map(tid => {
+                let fullNames = Array.from(activeTeachers).map((tid, index) => {
                     const t = teachers.find(x => x.id === tid);
-                    return t ? t.name : '';
-                }).filter(Boolean).join(', ');
+                    return t ? (index+1) + '. ' + t.name : (index+1) + '. ';
+                }).filter(Boolean).join('\n');
                 
                 row.push(fullNames);
                 
