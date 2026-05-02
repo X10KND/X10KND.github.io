@@ -135,7 +135,7 @@
     .duty-cell.drag-over { background: #e2e8f0; border-color: var(--primary); }
     .full-names-list { margin: 0; padding-left: 20px; }
 	
-	.priority-col { white-space: nowrap; }
+	.priority-col { white-space: nowrap; }		   
 </style>
 </head>
 <body>
@@ -144,11 +144,17 @@
     <div class="panel sidebar">
         <div class="form-group">
             <label>Full Name</label>
-            <input type="text" id="t-name" placeholder="e.g. Asef Jamil Ajwad">
+            <input type="text" id="t-name" placeholder="e.g. John Doe">
         </div>
         <div class="form-group">
             <label>Nickname</label>
-            <input type="text" id="t-nick" placeholder="e.g. Jalma">
+            <input type="text" id="t-nick" placeholder="e.g. JD">
+        </div>
+        
+        <div class="form-group" style="background: #fee2e2; padding: 10px; border-radius: 4px; border: 1px solid #fca5a5;">
+            <label style="display:flex; align-items:center; margin:0; cursor:pointer;">
+                <input type="checkbox" id="t-kg" style="width:auto; margin-right:8px;"> <strong>Is this a KG Teacher?</strong>
+            </label>
         </div>
         
         <div class="form-group">
@@ -219,6 +225,7 @@
     let teachers = rawTeachers.map(t => {
         if(typeof t.pref === 'string') t.pref = t.pref !== "" ? [parseInt(t.pref)] : [];
         if(typeof t.avoid === 'string') t.avoid = t.avoid !== "" ? [parseInt(t.avoid)] : [];
+        t.isKG = t.isKG || false; // Migration mapping for new variable
         return t;
     });
     
@@ -226,7 +233,7 @@
     let excludedDates = JSON.parse(localStorage.getItem('excludedDates')) || [];
     let currentMonth = localStorage.getItem('currentMonth') || "";
     
-    let editingId = null; // Tracks the ID of the teacher currently being edited
+    let editingId = null;
 
     const dutyColumns = [
         { id: 'g1', name: 'G1', req: 2 },
@@ -264,6 +271,7 @@
     function saveTeacher() {
         const name = document.getElementById('t-name').value.trim();
         const nick = document.getElementById('t-nick').value.trim();
+        const isKG = document.getElementById('t-kg').checked;
         const pairId = document.getElementById('t-pair').value;
 
         const prefNodes = document.querySelectorAll('#t-pref input:checked');
@@ -275,11 +283,9 @@
         if (!name || !nick) return alert("Name and Nickname are required.");
 
         if (editingId) {
-            // --- EDIT EXISTING TEACHER ---
             const t = teachers.find(x => x.id === editingId);
             if (!t) return cancelEdit();
 
-            // Handle un-pairing old partner if pair changed
             if (t.pair && t.pair !== pairId) {
                 const oldPartner = teachers.find(p => p.id === t.pair);
                 if (oldPartner) oldPartner.pair = "";
@@ -287,10 +293,10 @@
 
             t.name = name;
             t.nick = nick;
+            t.isKG = isKG;
             t.pref = pref;
             t.avoid = avoid;
 
-            // Handle new 2-way pair
             if (pairId) {
                 const targetPartner = teachers.find(x => x.id === pairId);
                 if (targetPartner) {
@@ -304,10 +310,7 @@
             t.pair = pairId;
 
         } else {
-            // --- ADD NEW TEACHER ---
             const id = 't_' + Date.now();
-            
-            // Handle 2-way pairing for new teacher
             if (pairId) {
                 const targetPartner = teachers.find(t => t.id === pairId);
                 if (targetPartner) {
@@ -318,15 +321,13 @@
                     targetPartner.pair = id;
                 }
             }
-            teachers.push({ id, name, nick, pref, avoid, pair: pairId });
+            teachers.push({ id, name, nick, isKG, pref, avoid, pair: pairId });
         }
         
-        cancelEdit(); // This resets the form
+        cancelEdit(); 
         saveData();
         renderTeachers();
         renderPool();
-        
-        // Render table to reflect possible nickname changes
         if(currentMonth) renderTable(); 
     }
 
@@ -337,11 +338,12 @@
         editingId = id;
         document.getElementById('t-name').value = t.name;
         document.getElementById('t-nick').value = t.nick;
+        document.getElementById('t-kg').checked = t.isKG || false;
         
         document.querySelectorAll('#t-pref input').forEach(n => n.checked = t.pref.includes(parseInt(n.value)));
         document.querySelectorAll('#t-avoid input').forEach(n => n.checked = t.avoid.includes(parseInt(n.value)));
         
-        updatePairOptions(); // Excludes currently editing teacher from dropdown
+        updatePairOptions(); 
         document.getElementById('t-pair').value = t.pair || "";
         
         document.getElementById('submit-btn').innerText = 'Update Teacher';
@@ -352,6 +354,7 @@
         editingId = null;
         document.getElementById('t-name').value = '';
         document.getElementById('t-nick').value = '';
+        document.getElementById('t-kg').checked = false;
         document.querySelectorAll('#t-pref input').forEach(n => n.checked = false);
         document.querySelectorAll('#t-avoid input').forEach(n => n.checked = false);
         
@@ -370,8 +373,7 @@
         }
 
         teachers = teachers.filter(t => t.id !== id);
-        
-        if (editingId === id) cancelEdit(); // Cancel edit if they delete the currently editing teacher
+        if (editingId === id) cancelEdit();
         
         saveData();
         renderTeachers();
@@ -388,10 +390,12 @@
             const partner = t.pair ? teachers.find(x => x.id === t.pair) : null;
             const pairedWith = partner ? partner.name : 'None';
             
+            const kgBadge = t.isKG ? `<span style="color:#ef4444; font-size:0.8em; font-weight:bold; background:#fee2e2; padding:2px 6px; border-radius:10px;">[KG]</span>` : '';
+
             return `
             <div class="teacher-list-item">
                 <div style="display:flex; flex-direction:column; gap:4px;">
-                    <span><strong>${t.name}</strong> (${t.nick})</span>
+                    <span><strong>${t.name}</strong> (${t.nick}) ${kgBadge}</span>
                     <span style="font-size: 0.85em; color: #64748b;">
                         Prefers: ${prefs} | Avoids: ${avoids} <br>
                         <strong>Paired with:</strong> <span style="color:var(--primary);">${pairedWith}</span>
@@ -407,7 +411,6 @@
 
     function updatePairOptions() {
         const select = document.getElementById('t-pair');
-        // Exclude the teacher being currently edited so they can't pair with themselves
         const availablePartners = teachers.filter(t => t.id !== editingId);
         select.innerHTML = '<option value="">None</option>' + availablePartners.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     }
@@ -553,14 +556,14 @@
 
             html += `<tr>
                 <td><strong>${day.dayName}</strong><br>${day.dateStr}</td>
-                <td class="priority-col">${fullNamesHtml}</td>`;
+                <td>${fullNamesHtml}</td>`;
                 
             dutyColumns.forEach(duty => {
                 const assigned = dailySched[duty.id] || [];
                 let pills = assigned.map(tid => {
                     const t = teachers.find(x => x.id === tid);
                     if(!t) return '';
-                    return `<span class="teacher-pill" ondblclick="removeDuty('${day.dateStr}', '${duty.id}', '${tid}')" title="Double click to remove">${t.nick}</span>`;
+                    return `<span class="teacher-pill" ondblclick="removeDuty('${day.dateStr}', '${duty.id}', '${tid}')" title="Double click to remove">${t.nick} &times;</span>`;
                 }).join('');
 
                 html += `<td class="duty-cell" 
@@ -583,6 +586,9 @@
         if (!currentMonth || teachers.length === 0) return alert("Select a month and add teachers first.");
         const [year, month] = currentMonth.split('-');
         const validDays = getDaysInMonth(parseInt(year), parseInt(month) - 1);
+        
+        // Find how many days are in the selected month for Last Wednesday calculation
+        const daysInMonthTotal = new Date(parseInt(year), parseInt(month), 0).getDate();
 
         const getWeek = (dateObj) => {
             const firstDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
@@ -591,6 +597,10 @@
 
         let g1History = {}; 
         let waitingRoomWeekly = {}; 
+        
+        // Pre-select 5 random teachers for the month to act as the Floor 2 Team
+        let floor2Team = [...teachers].sort(() => 0.5 - Math.random()).slice(0, 5);
+        let floor2Queue = [...floor2Team];
 
         validDays.forEach(day => {
             const daily = schedule[day.dateStr] || {};
@@ -605,6 +615,9 @@
             if (excludedDates.includes(day.dateStr)) return;
             if (!schedule[day.dateStr]) schedule[day.dateStr] = {};
             const daily = schedule[day.dateStr];
+            
+            // Check if today is the Last Wednesday of the Month
+            const isLastWednesday = day.dayIndex === 3 && (day.dateObj.getDate() + 7 > daysInMonthTotal);
 
             const assign = (duty, num, pool) => {
                 if (!daily[duty]) daily[duty] = [];
@@ -651,6 +664,7 @@
             dailyPool = dailyPool.filter(t => !daily.tinshed.includes(t.id));
             assign('tinshed', 2, dailyPool);
 
+            // --- Assign Waiting Room with KG Rule ---
             if(!daily.waiting) daily.waiting = [];
             const waitingPoolCandidates = [
                 ...(daily.tinshed || []),
@@ -659,14 +673,53 @@
             ].filter(Boolean);
 
             let waitingObjPool = waitingPoolCandidates.map(id => teachers.find(t => t.id === id));
-            waitingObjPool = waitingObjPool.filter(t => t && !daily.waiting.includes(t.id));
+            waitingObjPool = waitingObjPool.filter(t => {
+                if (!t || daily.waiting.includes(t.id)) return false;
+                if (isLastWednesday && t.isKG) return false; // NEW: Block KG on Last Wednesday
+                return true;
+            });
+            
             assign('waiting', 2, waitingObjPool);
+            
+            // If filtering out KG teachers caused us to miss our 2-person requirement, fill in from general pool
+            if (daily.waiting.length < 2) {
+                let fallbackPool = dailyPool.filter(t => {
+                    if (daily.waiting.includes(t.id)) return false;
+                    if (isLastWednesday && t.isKG) return false; 
+                    return true;
+                });
+                assign('waiting', 2, fallbackPool);
+            }
 
             const week = getWeek(day.dateObj);
             if(!waitingRoomWeekly[week]) waitingRoomWeekly[week] = [];
             daily.waiting.forEach(id => waitingRoomWeekly[week].push(id));
 
-            assign('floor2', 1, dailyPool);
+            // --- Assign Floor 2 from Dedicated 5-Person Queue ---
+            if(!daily.floor2) daily.floor2 = [];
+            let f2Needed = 1 - daily.floor2.length;
+            if (f2Needed > 0) {
+                let assignedIdx = -1;
+                // Find the first available person in the Floor 2 rotation queue
+                for (let i = 0; i < floor2Queue.length; i++) {
+                    let candidate = floor2Queue[i];
+                    if (dailyPool.some(t => t.id === candidate.id)) {
+                        daily.floor2.push(candidate.id);
+                        assignedIdx = i;
+                        break;
+                    }
+                }
+                
+                // If we found someone, cycle them to the back of the queue
+                if (assignedIdx > -1) {
+                    let assignedT = floor2Queue.splice(assignedIdx, 1)[0];
+                    floor2Queue.push(assignedT);
+                    dailyPool = dailyPool.filter(t => t.id !== assignedT.id);
+                } else {
+                    // Fallback if all 5 are somehow occupied/excluded today
+                    assign('floor2', 1, dailyPool);
+                }
+            }
 
             // --- Assign G1 (2) ---
             if(!daily.g1) daily.g1 = [];
